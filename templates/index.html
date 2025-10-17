@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1 class="title">This or that</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form id="setup-form" action="{{ url_for('setup') }}" method="POST" enctype="multipart/form-data" class="card">
+    <div id="channels" class="channels">
+      <!-- Two default slots -->
+    </div>
+
+    <div class="controls">
+      <div class="rounds-select">
+        <label for="rounds">Rounds</label>
+        <select name="rounds" id="rounds">
+          {% for n in range(5, 101, 5) %}
+            <option value="{{ n }}" {% if n == 15 %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="buttons">
+        <button type="button" id="add-slot" class="btn">＋ Add folder</button>
+      </div>
+    </div>
+    <div class="footer">
+      <button id="start-btn" class="btn primary" disabled>Start</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function() {
+  const maxSlots = 5;
+  const channelsDiv = document.getElementById('channels');
+  const addBtn = document.getElementById('add-slot');
+  const startBtn = document.getElementById('start-btn');
+
+  let slotCount = 0;
+
+  function makeSlot() {
+    const idx = slotCount++;
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+
+    const label = document.createElement('label');
+    label.textContent = `Channel ${idx + 1}`;
+    label.setAttribute('for', `channel${idx}`);
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.name = `channel${idx}`;
+    fileInput.id = `channel${idx}`;
+    fileInput.setAttribute('webkitdirectory', '');
+    fileInput.setAttribute('directory', '');
+    fileInput.multiple = true;
+    fileInput.addEventListener('change', onAnyChange);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = 'Choose a folder of images';
+
+    const actions = document.createElement('div');
+    actions.className = 'slot-actions';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn danger small';
+    removeBtn.textContent = '— Remove';
+    removeBtn.addEventListener('click', () => {
+      channelsDiv.removeChild(slot);
+      onAnyChange();
+    });
+
+    if (slotCount > 2) {
+      actions.appendChild(removeBtn);
+    } else {
+      // Keep space alignment with an invisible placeholder
+      const spacer = document.createElement('div');
+      spacer.style.height = '1px';
+      actions.appendChild(spacer);
+    }
+
+    slot.appendChild(label);
+    slot.appendChild(fileInput);
+    slot.appendChild(meta);
+    slot.appendChild(actions);
+    channelsDiv.appendChild(slot);
+  }
+
+  function onAnyChange() {
+    // Enable start when at least two slots have files chosen
+    const inputs = Array.from(channelsDiv.querySelectorAll('input[type="file"]'));
+    const filled = inputs.filter(inp => inp.files && inp.files.length > 0);
+    startBtn.disabled = filled.length < 2;
+    // Hide add button if we already have max slots
+    const numSlots = channelsDiv.querySelectorAll('.slot').length;
+    addBtn.disabled = numSlots >= maxSlots;
+  }
+
+  addBtn.addEventListener('click', () => {
+    const numSlots = channelsDiv.querySelectorAll('.slot').length;
+    if (numSlots < maxSlots) {
+      makeSlot();
+      onAnyChange();
+    }
+  });
+
+  // Initialize with two slots by default
+  makeSlot();
+  makeSlot();
+  onAnyChange();
+})();
+</script>
+{% endblock %}

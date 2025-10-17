@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container narrow">
+  <h2 class="title">Results</h2>
+  <p class="subtitle">Preference across {{ rounds }} rounds</p>
+  <div class="results">
+    {% for row in results %}
+      <div class="result-row">
+        <div class="label">{{ row.channel }}</div>
+        <div class="bar">
+          <div class="fill" style="width: {{ row.percent }}%"></div>
+        </div>
+        <div class="value">{{ row.percent }}%</div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="slot-actions">
+    <form action="{{ url_for('replay') }}" method="POST">
+      <button class="btn primary">Replay</button>
+    </form>
+    <form action="{{ url_for('startover') }}" method="POST">
+      <button class="btn outline">Start over</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
