@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container">
-  <h1 class="title">This or that</h1>
+  <h1 class="title">This or that!..</h1>
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="flash-container">
@@ -13,9 +13,8 @@
   {% endwith %}
 
   <form id="setup-form" action="{{ url_for('setup') }}" method="POST" enctype="multipart/form-data" class="card">
-    <div id="channels" class="channels">
-      <!-- Two default slots -->
-    </div>
+    <input type="hidden" id="slot_indices" name="slot_indices" value="">
+    <div id="channels" class="channels"></div>
 
     <div class="controls">
       <div class="rounds-select">
@@ -27,7 +26,7 @@
         </select>
       </div>
       <div class="buttons">
-        <button type="button" id="add-slot" class="btn">＋ Add folder</button>
+        <button type="button" id="add-slot" class="btn">＋ Add channel</button>
       </div>
     </div>
     <div class="footer">
@@ -37,86 +36,202 @@
 </div>
 
 <script>
+const AVAILABLE_SOURCES = {{ sources | tojson }};
+
 (function() {
   const maxSlots = 5;
   const channelsDiv = document.getElementById('channels');
   const addBtn = document.getElementById('add-slot');
   const startBtn = document.getElementById('start-btn');
+  const slotIndicesInput = document.getElementById('slot_indices');
 
-  let slotCount = 0;
+  let nextIndex = 0;
+
+  function currentIndices() {
+    return Array.from(channelsDiv.querySelectorAll('.slot')).map(s => parseInt(s.dataset.idx, 10));
+  }
+
+  function updateSlotIndicesField() {
+    slotIndicesInput.value = currentIndices().join(',');
+  }
+
+  function getSourceSpec(key) {
+    return AVAILABLE_SOURCES.find(s => s.key === key);
+  }
+
+  // Generic input satisfaction check based on field types
+  function inputSatisfied(slot) {
+    const sourceKey = slot.querySelector('select.source').value;
+    const spec = getSourceSpec(sourceKey);
+    if (!spec) return false;
+
+    // All required fields must be non-empty
+    for (const f of (spec.fields || [])) {
+      if (!f.required) continue;
+      const name = `channel${slot.dataset.idx}_${f.key}`;
+      const el = slot.querySelector(`[name="${name}"]`);
+      if (!el) return false;
+      if (f.type === 'file') {
+        if (!el.files || el.files.length === 0) return false;
+      } else if (f.type === 'text') {
+        if (!el.value || el.value.trim().length === 0) return false;
+      }
+    }
+    return true;
+  }
+
+  function refreshStartEnabled() {
+    const slots = Array.from(channelsDiv.querySelectorAll('.slot'));
+    const satisfied = slots.filter(inputSatisfied).length;
+    startBtn.disabled = satisfied < 2;
+  }
+
+  // Render the field UI from the source spec into the slot
+  function renderFields(slot) {
+    const container = slot.querySelector('.source-fields');
+    container.innerHTML = '';
+
+    const sourceKey = slot.querySelector('select.source').value;
+    const spec = getSourceSpec(sourceKey);
+    if (!spec) return;
+
+    for (const field of (spec.fields || [])) {
+      const wrap = document.createElement('div');
+      wrap.className = `${sourceKey}-wrap`;
+
+      // Label (optional)
+      if (field.label) {
+        const lab = document.createElement('div');
+        lab.className = 'meta';
+        lab.style.fontWeight = '600';
+        lab.textContent = field.label;
+        wrap.appendChild(lab);
+      }
+
+      // Input
+      if (field.type === 'file') {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.name = `channel${slot.dataset.idx}_${field.key}`;
+        if (field.folder) {
+          inp.setAttribute('webkitdirectory', '');
+          inp.setAttribute('directory', '');
+          inp.multiple = true;
+        }
+        inp.addEventListener('change', refreshStartEnabled);
+        wrap.appendChild(inp);
+      } else if (field.type === 'text') {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.name = `channel${slot.dataset.idx}_${field.key}`;
+        if (field.placeholder) inp.placeholder = field.placeholder;
+        // Keep class hooks if you used them elsewhere (optional)
+        if (field.key === 'test') inp.classList.add('test-input');
+        inp.addEventListener('input', refreshStartEnabled);
+        wrap.appendChild(inp);
+      }
+
+      // Help text (optional)
+      if (field.help) {
+        const help = document.createElement('div');
+        help.className = 'meta';
+        help.textContent = field.help;
+        wrap.appendChild(help);
+      }
+
+      container.appendChild(wrap);
+    }
+  }
+
+  function onSourceChange(slot) {
+    renderFields(slot);
+    refreshStartEnabled();
+  }
+
+  function makeSourceSelect(idx) {
+    const sel = document.createElement('select');
+    sel.name = `channel${idx}_source`;
+    sel.className = 'source';
+    for (const s of AVAILABLE_SOURCES) {
+      const opt = document.createElement('option');
+      opt.value = s.key;
+      opt.textContent = s.label;
+      if (s.key === 'upload') opt.selected = true;
+      sel.appendChild(opt);
+    }
+    return sel;
+  }
+
+  // Enable/disable remove buttons (only remove if >2 slots)
+  function updateRemoveButtons() {
+    const slots = channelsDiv.querySelectorAll('.slot');
+    const canRemove = slots.length > 2;
+    slots.forEach(slot => {
+      const btn = slot.querySelector('.slot-actions .btn');
+      if (btn) btn.disabled = !canRemove;
+    });
+  }
 
   function makeSlot() {
-    const idx = slotCount++;
+    const idx = nextIndex++;
     const slot = document.createElement('div');
     slot.className = 'slot';
+    slot.dataset.idx = String(idx);
 
+    // Label
     const label = document.createElement('label');
     label.textContent = `Channel ${idx + 1}`;
-    label.setAttribute('for', `channel${idx}`);
 
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.name = `channel${idx}`;
-    fileInput.id = `channel${idx}`;
-    fileInput.setAttribute('webkitdirectory', '');
-    fileInput.setAttribute('directory', '');
-    fileInput.multiple = true;
-    fileInput.addEventListener('change', onAnyChange);
+    // Source select
+    const sourceSel = makeSourceSelect(idx);
+    sourceSel.addEventListener('change', () => onSourceChange(slot));
 
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.textContent = 'Choose a folder of images';
+    // Container where source-specific fields render
+    const fieldsContainer = document.createElement('div');
+    fieldsContainer.className = 'source-fields';
 
+    // Actions
     const actions = document.createElement('div');
     actions.className = 'slot-actions';
-
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'btn danger small';
     removeBtn.textContent = '— Remove';
     removeBtn.addEventListener('click', () => {
+      if (channelsDiv.querySelectorAll('.slot').length <= 2) return;
       channelsDiv.removeChild(slot);
-      onAnyChange();
+      updateSlotIndicesField();
+      refreshStartEnabled();
+      addBtn.disabled = channelsDiv.querySelectorAll('.slot').length >= maxSlots;
+      updateRemoveButtons();
     });
+    actions.appendChild(removeBtn);
 
-    if (slotCount > 2) {
-      actions.appendChild(removeBtn);
-    } else {
-      // Keep space alignment with an invisible placeholder
-      const spacer = document.createElement('div');
-      spacer.style.height = '1px';
-      actions.appendChild(spacer);
-    }
-
+    // Layout
     slot.appendChild(label);
-    slot.appendChild(fileInput);
-    slot.appendChild(meta);
+    slot.appendChild(sourceSel);
+    slot.appendChild(fieldsContainer);
     slot.appendChild(actions);
-    channelsDiv.appendChild(slot);
-  }
 
-  function onAnyChange() {
-    // Enable start when at least two slots have files chosen
-    const inputs = Array.from(channelsDiv.querySelectorAll('input[type="file"]'));
-    const filled = inputs.filter(inp => inp.files && inp.files.length > 0);
-    startBtn.disabled = filled.length < 2;
-    // Hide add button if we already have max slots
-    const numSlots = channelsDiv.querySelectorAll('.slot').length;
-    addBtn.disabled = numSlots >= maxSlots;
+    channelsDiv.appendChild(slot);
+    updateSlotIndicesField();
+    onSourceChange(slot);                 // renders fields from Python spec
+    refreshStartEnabled();
+    addBtn.disabled = channelsDiv.querySelectorAll('.slot').length >= maxSlots;
+    updateRemoveButtons();
   }
 
   addBtn.addEventListener('click', () => {
-    const numSlots = channelsDiv.querySelectorAll('.slot').length;
-    if (numSlots < maxSlots) {
+    if (channelsDiv.querySelectorAll('.slot').length < maxSlots) {
       makeSlot();
-      onAnyChange();
+      updateRemoveButtons();
     }
   });
 
-  // Initialize with two slots by default
+  // Initialize with two slots
   makeSlot();
   makeSlot();
-  onAnyChange();
+  updateRemoveButtons();
 })();
 </script>
 {% endblock %}

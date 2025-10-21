@@ -26,9 +26,19 @@ html, body {
   margin: 48px auto;
   padding: 0 20px;
 }
-.container.narrow {
-  max-width: 820px;
+.container.narrow { max-width: 820px; }
+
+/* --- Bigger canvas for the face-off --- */
+.container.wide {
+  max-width: min(1600px, 96vw);
+  margin: 24px auto;
 }
+
+/* On large screens, open up spacing a bit */
+@media (min-width: 1200px) {
+  .faceoff { gap: 24px; }
+}
+
 .title {
   font-size: 28px;
   font-weight: 700;
@@ -48,38 +58,78 @@ html, body {
   box-shadow: var(--shadow);
   padding: 20px;
 }
+
+/* ====== HOMEPAGE: CHANNEL SLOTS ====== */
 .channels {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 16px;                          /* slightly more breathing room */
 }
 .slot {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr 140px;
+  /* Label | Source dropdown | Fields | Actions */
+  grid-template-columns: 140px 200px 1fr 120px;
   align-items: center;
-  gap: 12px;
+  gap: 16px;                          /* cleaner rhythm */
   background: var(--card);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 12px;
-  padding: 14px;
+  padding: 16px;                      /* a hair more padding */
 }
 .slot label {
   color: var(--muted);
   font-weight: 600;
 }
-.slot input[type="file"] {
+
+/* Inputs & selects: subtle, consistent look */
+.slot select,
+.slot input[type="file"],
+.slot input[type="text"] {
   width: 100%;
+  height: 40px;                       /* consistent control height */
   background: rgba(255,255,255,0.02);
   color: var(--text);
-  border: 1px dashed rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.12);  /* solid, not dashed */
   border-radius: 10px;
-  padding: 10px;
+  padding: 8px 10px;
 }
+.slot select { appearance: none; }    /* keeps it tidy across browsers */
+
+/* Make the native file button match your theme a bit better (supported browsers) */
+.slot input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.slot input[type="file"]::file-selector-button:hover { filter: brightness(1.05); }
+
 .meta {
   color: var(--muted);
   font-size: 12px;
+  margin-top: 6px;                    /* sit a touch below the control */
 }
+
 .slot-actions { display: flex; justify-content: flex-end; }
+
+/* --- Fix button spacing on the results page --- */
+.actions-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+}
+.actions-row form { margin: 0; }
+.actions-row .btn {
+  min-width: 140px;
+  text-align: center;
+}
+
 .controls {
   display: flex;
   align-items: center;
@@ -112,7 +162,6 @@ html, body {
   background: linear-gradient(90deg, rgba(91,157,255,0.18), rgba(160,118,255,0.18));
   color: var(--text);
   padding: 10px 14px;
-  margin: 4px 4px;
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
@@ -121,13 +170,8 @@ html, body {
 }
 .btn:hover { filter: brightness(1.1); }
 .btn:active { transform: translateY(1px); }
-.btn.primary {
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-}
-.btn.outline {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
-}
+.btn.primary { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.btn.outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); }
 .btn.danger {
   background: linear-gradient(90deg, rgba(255,107,107,0.9), rgba(255,107,107,0.7));
 }
@@ -136,21 +180,23 @@ html, body {
   color: #ff8b8b;
   border: 1px solid rgba(255,107,107,0.5);
 }
-.btn.small {
-  padding: 6px 10px;
-  font-size: 12px;
-  border-radius: 8px;
+.btn.small { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+
+/* Disabled state for remove buttons */
+.btn[disabled],
+.btn.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.2);
 }
 
+/* ====== PLAY VIEW ====== */
 .hud {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.round-label {
-  color: var(--muted);
-  font-weight: 600;
-}
+.round-label { color: var(--muted); font-weight: 600; }
 .spacer { flex: 1; }
 
 .faceoff {
@@ -162,7 +208,7 @@ html, body {
 }
 .image-button {
   width: 100%;
-  height: 70vh;            /* take up ~70% of the viewport height */
+  aspect-ratio: 4 / 3;
   background: var(--card);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 16px;
@@ -170,34 +216,24 @@ html, body {
   padding: 0;
   cursor: pointer;
 }
-
 .image-button img {
   width: 100%;
   height: 100%;
-  object-fit: cover;       /* fill space more naturally */
+  object-fit: contain;
   display: block;
   background: #0f141b;
 }
+.vs { color: var(--muted); font-weight: 700; opacity: 0.7; }
 
-.vs {
-  color: var(--muted);
-  font-weight: 700;
-  opacity: 0.7;
-}
-
-.results {
-  display: grid;
-  gap: 10px;
-}
+/* ====== RESULTS ====== */
+.results { display: grid; gap: 10px; }
 .result-row {
   display: grid;
   grid-template-columns: 160px 1fr 80px;
   gap: 12px;
   align-items: center;
 }
-.result-row .label {
-  color: var(--muted);
-}
+.result-row .label { color: var(--muted); }
 .result-row .bar {
   height: 14px;
   background: rgba(255,255,255,0.08);
@@ -210,6 +246,7 @@ html, body {
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
 }
 
+/* ====== FLASH ====== */
 .flash-container { margin-bottom: 12px; }
 .flash {
   border-radius: 10px;
@@ -219,35 +256,15 @@ html, body {
 }
 .flash.error { border-color: rgba(255,107,107,0.5); color: #ffdede; }
 
-/* ==== FULL-WIDTH LAYOUT FOR PLAY SCREEN ==== */
-.play-screen main,
-.container.wide {
-  /* EXPAND HORIZONTALLY + ADD TOP BREATHING ROOM */
-  max-width: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 4vh 2vw 2vh;  /* top space to avoid 'scrunched' look + slim side gutters */
-}
-
-/* Slight space below the HUD on play screen only */
-.play-screen .hud { 
-  margin-bottom: 1.5vh;
-}
-
-.play-screen .faceoff {
-  grid-template-columns: 1fr auto 1fr;
-  gap: 2vw;
-  align-items: stretch;
-  justify-content: center;
-  width: 100%;
-}
-
-.play-screen .image-button {
-  /* a touch shorter to account for top padding + HUD so no vertical crowding */
-  height: 72vh;
-  border-radius: 20px;
-}
-
-.play-screen .image-button img {
-  object-fit: cover;
+/* ====== RESPONSIVE TWEAKS ====== */
+@media (max-width: 820px) {
+  .slot {
+    grid-template-columns: 1fr 1fr;   /* stack fields neatly */
+  }
+  .slot label { grid-column: 1 / 2; }
+  .slot select { grid-column: 2 / 3; }
+  .slot input[type="file"],
+  .slot input[type="text"],
+  .meta { grid-column: 1 / 3; }
+  .slot-actions { grid-column: 1 / 3; justify-content: flex-end; }
 }

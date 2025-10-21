@@ -1,35 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="play-screen">
-  <div class="container wide">
-    <!-- Top padding -->
-    <div class="top-space"></div>
+<div class="container wide">
+  <div class="hud">
+    <div class="round-label">Round {{ round_number }} / {{ rounds_total }}</div>
+    <div class="spacer"></div>
+    <form action="{{ url_for('startover') }}" method="POST">
+      <button class="btn danger outline small">Start over</button>
+    </form>
+  </div>
 
-    <div class="hud">
-      <div class="round-label">Round {{ round_number }} / {{ rounds_total }}</div>
-      <div class="spacer"></div>
-      <form action="{{ url_for('startover') }}" method="POST">
-        <button class="btn danger outline small">Start over</button>
-      </form>
-    </div>
+  <div class="faceoff">
+    <form action="{{ url_for('choose') }}" method="POST" class="choice left">
+      <input type="hidden" name="choice" value="left">
+      <button class="image-button" type="submit" title="Choose left">
+        <img src="{{ left_url }}" alt="Left option">
+      </button>
+    </form>
 
-    <div class="faceoff">
-      <form action="{{ url_for('choose') }}" method="POST" class="choice left">
-        <input type="hidden" name="choice" value="left">
-        <button class="image-button" type="submit" title="Choose left">
-          <img src="{{ left_url }}" alt="Left option">
-        </button>
-      </form>
+    <div class="vs">or</div>
 
-      <div class="vs">or</div>
-
-      <form action="{{ url_for('choose') }}" method="POST" class="choice right">
-        <input type="hidden" name="choice" value="right">
-        <button class="image-button" type="submit" title="Choose right">
-          <img src="{{ right_url }}" alt="Right option">
-        </button>
-      </form>
-    </div>
+    <form action="{{ url_for('choose') }}" method="POST" class="choice right">
+      <input type="hidden" name="choice" value="right">
+      <button class="image-button" type="submit" title="Choose right">
+        <img src="{{ right_url }}" alt="Right option">
+      </button>
+    </form>
   </div>
 </div>
 {% endblock %}
